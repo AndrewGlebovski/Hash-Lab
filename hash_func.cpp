@@ -4,11 +4,11 @@
 #include <time.h>
 
 
-const size_t BUFFER_SIZE = 1000;
+const size_t BUFFER_SIZE = 109;
 const size_t ITERATIONS = 1000000;
 
 
-#define KEY_TYPE 2
+#define KEY_TYPE 0
 
 
 #if (KEY_TYPE == 0)
@@ -16,10 +16,10 @@ typedef int okey_t;
 const int MAX_INT = INT_MAX;
 #elif (KEY_TYPE == 1)
 typedef float okey_t;
-const float MAX_FLOAT = 50000.0f;
+const float MAX_FLOAT = 1.0e+9f;
 #elif (KEY_TYPE == 2)
 typedef char *okey_t;
-const size_t MAX_LENGTH = 250;
+const size_t MAX_LENGTH = 1009;
 #endif
 
 typedef unsigned long long hash_t;
@@ -32,7 +32,7 @@ typedef struct {
 } HashFuncInfo;
 
 
-void test_func(FILE *csv_file, HashFuncInfo *info);
+void test_func(FILE *csv_file, okey_t *arr, HashFuncInfo *info);
 
 okey_t key_generator();
 
@@ -48,9 +48,10 @@ hash_t hash_bin(int key) {
 
 
 hash_t hash_mul(int key) {
-    float f = ((float) rand() / (float) RAND_MAX) * key;
-    f = f - (int) f;
-    return BUFFER_SIZE * f;
+    double num = key;
+    num *= 0.6180339887;
+    num = num - (int) num;
+    return (1 << 12) * num;
 }
 
 
@@ -105,35 +106,41 @@ int main() {
 
 #if (KEY_TYPE == 0)
     HashFuncInfo func_list[] = {
-        {&hash_mod, "mod"},
-        {&hash_bin, "bin"},
-        {&hash_mul, "mul"},
+        {&hash_mod, "mod.txt"},
+        {&hash_bin, "bin.txt"},
+        {&hash_mul, "mul.txt"},
     };
 #elif (KEY_TYPE == 1)
     HashFuncInfo func_list[] = {
-        {&hash_int, "int"},
-        {&hash_bin, "bin"},
+        {&hash_int, "int.txt"},
+        {&hash_bin, "bin.txt"},
     };
 #elif (KEY_TYPE == 2)
     HashFuncInfo func_list[] = {
-        {&hash_len,     "len"},
-        {&hash_charsum, "charsum"},
-        {&poly_hash,    "poly hash"},
-        {&crc32,        "crc32"},
+        {&hash_len,     "len.txt"},
+        {&hash_charsum, "charsum.txt"},
+        {&poly_hash,    "poly_hash.txt"},
+        {&crc32,        "crc32.txt"},
     };
 #endif
-
-    FILE *csv_file = fopen("result.csv", "a");
     
-    for (size_t i = 0; i < BUFFER_SIZE; i++)
-        fprintf(csv_file, ", %lu", i);
+    okey_t *arr = (okey_t *) calloc(ITERATIONS, sizeof(okey_t)); 
 
-    fputc('\n', csv_file);
+    for (size_t i = 0; i < ITERATIONS; i++) arr[i] = key_generator();
 
-    for (size_t func = 0; func < sizeof(func_list) / sizeof(HashFuncInfo); func++)
-        test_func(csv_file, func_list + func);
+    for (size_t func = 0; func < sizeof(func_list) / sizeof(HashFuncInfo); func++) {
+        FILE *csv_file = fopen(func_list[func].name, "w");
 
-    fclose(csv_file);
+        test_func(csv_file, arr, func_list + func);
+
+        fclose(csv_file);
+    }
+
+#if (KEY_TYPE == 2)
+    for (size_t i = 0; i < ITERATIONS; i++) free(arr[i]);
+#endif
+
+    free(arr);
 
     printf("Hash-Function!\n");
 
@@ -141,25 +148,16 @@ int main() {
 }
 
 
-void test_func(FILE *csv_file, HashFuncInfo *info) {
+void test_func(FILE *csv_file, okey_t *arr, HashFuncInfo *info) {
     hash_t *buffer = (hash_t *) calloc(BUFFER_SIZE, sizeof(hash_t));
 
     for (size_t i = 0; i < ITERATIONS; i++) {
-        okey_t key = key_generator();
-        (buffer[info -> func(key) % BUFFER_SIZE])++;
-
-#if (KEY_TYPE == 2)
-        free(key);
-#endif
+        (buffer[info -> func(arr[i]) % BUFFER_SIZE])++;
     }
-
-    fprintf(csv_file, "%s", info -> name);
 
     for (size_t i = 0; i < BUFFER_SIZE; i++) {
-        fprintf(csv_file, ",  %llu", buffer[i]);
+        fprintf(csv_file, "%llu\n", buffer[i]);
     }
-
-    fputc('\n', csv_file);
 }
 
 
@@ -169,10 +167,9 @@ okey_t key_generator() {
 #elif (KEY_TYPE == 1)
     return ((float) rand() / (float) RAND_MAX) * MAX_FLOAT;
 #elif (KEY_TYPE == 2)
-    size_t len = rand() + 5;
-    if (len > MAX_LENGTH) len = MAX_LENGTH;
+    size_t len = rand() % (MAX_LENGTH - 1) + 1;
     char *key = (char *) calloc(len + 1, sizeof(char));
-    for (size_t i = 0; i < len; i++) key[i] = rand() % 256;
+    for (size_t i = 0; i < len; i++) key[i] = rand() % 26 + 'a';
     key[len] = '\0';
     return key;
 #endif
