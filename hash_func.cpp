@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <time.h>
+#include <assert.h>
 
 
 const size_t BUFFER_SIZE = 109;
@@ -124,12 +125,14 @@ int main() {
     };
 #endif
     
-    okey_t *arr = (okey_t *) calloc(ITERATIONS, sizeof(okey_t)); 
+    okey_t *arr = (okey_t *) calloc(ITERATIONS, sizeof(okey_t));
+    assert(arr && "Can't allocate buffer!\n");
 
     for (size_t i = 0; i < ITERATIONS; i++) arr[i] = key_generator();
 
     for (size_t func = 0; func < sizeof(func_list) / sizeof(HashFuncInfo); func++) {
         FILE *csv_file = fopen(func_list[func].name, "w");
+        assert(csv_file && "Can't open CSV file!\n");
 
         test_func(csv_file, arr, func_list + func);
 
@@ -150,14 +153,13 @@ int main() {
 
 void test_func(FILE *csv_file, okey_t *arr, HashFuncInfo *info) {
     hash_t *buffer = (hash_t *) calloc(BUFFER_SIZE, sizeof(hash_t));
+    assert(buffer && "Can't allocate buffer!\n");
 
-    for (size_t i = 0; i < ITERATIONS; i++) {
+    for (size_t i = 0; i < ITERATIONS; i++)
         (buffer[info -> func(arr[i]) % BUFFER_SIZE])++;
-    }
 
-    for (size_t i = 0; i < BUFFER_SIZE; i++) {
+    for (size_t i = 0; i < BUFFER_SIZE; i++)
         fprintf(csv_file, "%llu\n", buffer[i]);
-    }
 }
 
 
