@@ -33,7 +33,7 @@ typedef struct {
 } HashFuncInfo;
 
 
-void test_func(FILE *csv_file, okey_t *arr, HashFuncInfo *info);
+void test_func(FILE *file, okey_t *arr, HashFuncInfo *info);
 
 okey_t key_generator();
 
@@ -131,12 +131,12 @@ int main() {
     for (size_t i = 0; i < ITERATIONS; i++) arr[i] = key_generator();
 
     for (size_t func = 0; func < sizeof(func_list) / sizeof(HashFuncInfo); func++) {
-        FILE *csv_file = fopen(func_list[func].name, "w");
-        assert(csv_file && "Can't open CSV file!\n");
+        FILE *file = fopen(func_list[func].name, "w");
+        assert(file && "Can't open file!\n");
 
-        test_func(csv_file, arr, func_list + func);
+        test_func(file, arr, func_list + func);
 
-        fclose(csv_file);
+        fclose(file);
     }
 
 #if (KEY_TYPE == 2)
@@ -151,7 +151,7 @@ int main() {
 }
 
 
-void test_func(FILE *csv_file, okey_t *arr, HashFuncInfo *info) {
+void test_func(FILE *file, okey_t *arr, HashFuncInfo *info) {
     hash_t *buffer = (hash_t *) calloc(BUFFER_SIZE, sizeof(hash_t));
     assert(buffer && "Can't allocate buffer!\n");
 
@@ -159,7 +159,7 @@ void test_func(FILE *csv_file, okey_t *arr, HashFuncInfo *info) {
         (buffer[info -> func(arr[i]) % BUFFER_SIZE])++;
 
     for (size_t i = 0; i < BUFFER_SIZE; i++)
-        fprintf(csv_file, "%llu\n", buffer[i]);
+        fprintf(file, "%llu\n", buffer[i]);
 }
 
 
